@@ -250,6 +250,15 @@ type InstancePage struct {
 	Total     int        `json:"total"`
 }
 
+// InstanceStats defines model for instanceStats.
+type InstanceStats struct {
+	Arch        string    `json:"arch"`
+	ChannelName string    `json:"channel_name"`
+	Instances   int       `json:"instances"`
+	Timestamp   time.Time `json:"timestamp"`
+	Version     string    `json:"version"`
+}
+
 // InstanceStatusHistories defines model for instanceStatusHistories.
 type InstanceStatusHistories = []InstanceStatusHistory
 

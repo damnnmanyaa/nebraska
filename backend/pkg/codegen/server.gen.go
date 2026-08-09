@@ -116,6 +116,9 @@ type ServerInterface interface {
 	// (PUT /api/instances/{instanceID})
 	UpdateInstance(ctx echo.Context, instanceID string) error
 
+	// (GET /api/instances_stats/latest)
+	GetInstanceStatsLatest(ctx echo.Context) error
+
 	// (GET /config)
 	GetConfig(ctx echo.Context) error
 
@@ -1321,6 +1324,21 @@ func (w *ServerInterfaceWrapper) UpdateInstance(ctx echo.Context) error {
 	return err
 }
 
+// GetInstanceStatsLatest converts echo context to params.
+func (w *ServerInterfaceWrapper) GetInstanceStatsLatest(ctx echo.Context) error {
+	var err error
+
+	ctx.Set(OidcBearerAuthScopes, []string{})
+
+	ctx.Set(OidcCookieAuthScopes, []string{})
+
+	ctx.Set(GithubCookieAuthScopes, []string{})
+
+	// Invoke the callback with all the unmarshaled arguments
+	err = w.Handler.GetInstanceStatsLatest(ctx)
+	return err
+}
+
 // GetConfig converts echo context to params.
 func (w *ServerInterfaceWrapper) GetConfig(ctx echo.Context) error {
 	var err error
@@ -1476,6 +1494,7 @@ func RegisterHandlersWithBaseURL(router EchoRouter, si ServerInterface, baseURL 
 	router.DELETE(baseURL+"/api/channels/:channelID/floors/:packageID", wrapper.RemoveChannelFloor)
 	router.PUT(baseURL+"/api/channels/:channelID/floors/:packageID", wrapper.SetChannelFloor)
 	router.PUT(baseURL+"/api/instances/:instanceID", wrapper.UpdateInstance)
+	router.GET(baseURL+"/api/instances_stats/latest", wrapper.GetInstanceStatsLatest)
 	router.GET(baseURL+"/config", wrapper.GetConfig)
 	router.GET(baseURL+"/health", wrapper.Health)
 	router.GET(baseURL+"/login/cb", wrapper.LoginCb)

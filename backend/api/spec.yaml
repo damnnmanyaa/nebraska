@@ -481,6 +481,26 @@ paths:
         "500":
           description: Status Timeline of group error response
 
+  /api/instances_stats/latest:
+    get:
+      description: get the latest snapshot of instance stats across all channels, architectures, and versions
+      operationId: getInstanceStatsLatest
+      security:
+        - oidcBearerAuth: []
+        - oidcCookieAuth: []
+        - githubCookieAuth: []
+      responses:
+        "200":
+          description: Latest instance stats success response
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/instanceStats"
+        "500":
+          description: Get latest instance stats error response
+
   /api/apps/{appIDorProductID}/groups/{groupID}/instances_stats:
     get:
       description: get instance stats of a group given its groupID and appID
@@ -1859,6 +1879,27 @@ components:
           properties:
             count:
               type: integer
+
+    instanceStats:
+      type: object
+      required:
+        - timestamp
+        - channel_name
+        - arch
+        - version
+        - instances
+      properties:
+        timestamp:
+          type: string
+          format: date-time
+        channel_name:
+          type: string
+        arch:
+          type: string
+        version:
+          type: string
+        instances:
+          type: integer
 
     groupInstanceStats:
       type: object
