@@ -238,6 +238,11 @@ func (api *API) Close() {
 	_ = api.db.Close()
 }
 
+// DB returns the underlying sqlx.DB instance.
+func (api *API) DB() *sqlx.DB {
+	return api.db
+}
+
 // Reads returns the shared read queries (dbreads.Queries) owned by this API
 // instance.
 func (api *API) Reads() *dbreads.Queries {
