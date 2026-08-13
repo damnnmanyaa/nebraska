@@ -12,6 +12,7 @@ import {
   Group,
   Instance,
   Instances,
+  InstanceStats,
   InstanceStatusHistory,
   Package,
   VersionBreakdownEntry,
@@ -100,6 +101,10 @@ export default class API {
     return API.getJSON(
       `${BASE_URL}/apps/${applicationID}/groups/${groupID}/instances_stats?duration=${duration}`
     );
+  }
+
+  static getInstanceStatsLatest(): Promise<InstanceStats[]> {
+    return API.getJSON(`${BASE_URL}/instances_stats/latest`);
   }
 
   static getGroupVersionBreakdown(

@@ -143,3 +143,11 @@ export interface VersionBreakdownEntry {
   instances: number;
   percentage: number;
 }
+
+export interface InstanceStats {
+  timestamp: string;
+  channel_name: string;
+  arch: string;
+  version: string;
+  instances: number;
+}
