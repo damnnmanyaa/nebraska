@@ -464,7 +464,10 @@ func (q *Queries) GetInstanceStatsByTimestamp(t time.Time) ([]types.InstanceStat
 	return instances, nil
 }
 
-// GetLatestInstanceStatsTimestamp returns the MAX(timestamp) from instance_stats.
+// GetLatestInstanceStatsTimestamp returns the MAX(timestamp) from
+// instance_stats. Nebraska's documented convention is that the database
+// session runs in UTC (see docs/poc/known-issues.md) — callers should not
+// assume this function normalizes timezone on their behalf.
 func (q *Queries) GetLatestInstanceStatsTimestamp() (time.Time, error) {
 	var t time.Time
 	query, _, err := goqu.From("instance_stats").
@@ -481,12 +484,21 @@ func (q *Queries) GetLatestInstanceStatsTimestamp() (time.Time, error) {
 	return t, nil
 }
 
-// GetInstanceStatsLatest returns an InstanceStats array of instances matching the
-// latest timestamp, ordered by version.
+// GetInstanceStatsLatest returns an InstanceStats array of instances
+// matching the latest timestamp, ordered by version.
+//
+// Normalizes the timestamp to UTC before calling
+// GetInstanceStatsByTimestamp to work around a known timestamp-cast bug
+// in that function (see docs/poc/known-issues.md). GetInstanceStatsByTimestamp
+// itself is intentionally left unmodified — the fix is scoped to this
+// caller only.
 func (q *Queries) GetInstanceStatsLatest() ([]types.InstanceStats, error) {
 	t, err := q.GetLatestInstanceStatsTimestamp()
 	if err != nil {
 		return nil, err
 	}
+	// .UTC() workaround for the timestamp-cast bug in
+	// GetInstanceStatsByTimestamp — see docs/poc/known-issues.md. Do not remove
+	// without also fixing that function's cast.
 	return q.GetInstanceStatsByTimestamp(t.UTC())
 }

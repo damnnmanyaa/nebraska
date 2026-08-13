@@ -31,6 +31,8 @@ func TestGetInstanceStatsLatest(t *testing.T) {
 	// Get latest stats
 	instanceStats, err := a.GetInstanceStatsLatest()
 	assert.NoError(t, err)
+	// See docs/poc/known-issues.md for the full root-cause writeup of the bug
+	// this assertion guards against.
 	require.NotEmpty(t, instanceStats, "GetInstanceStatsLatest returned 0 items. This is likely due to the known timezone offset dropping bug in GetInstanceStatsByTimestamp's timestamp cast.")
 
 	assert.Equal(t, 1, len(instanceStats))
