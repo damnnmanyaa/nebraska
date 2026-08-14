@@ -1,7 +1,9 @@
 import Grid from '@mui/material/Grid';
+import Paper from '@mui/material/Paper';
 
 import ActivityContainer from '../../Activity/ActivityContainer';
 import ApplicationList from '../../Applications/ApplicationList';
+import LatestInstanceStats from '../../Instances/LatestInstanceStats';
 
 function MainLayout() {
   return (
@@ -21,6 +23,11 @@ function MainLayout() {
         }}
       >
         <ActivityContainer />
+      </Grid>
+      <Grid size={12}>
+        <Paper sx={{ p: 2 }}>
+          <LatestInstanceStats />
+        </Paper>
       </Grid>
     </Grid>
   );

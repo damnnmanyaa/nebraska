@@ -5,3 +5,4 @@ tools/swag
 tools/oapi-codegen
 .env
 /nebraska
+tools/oapi-codegen.exe

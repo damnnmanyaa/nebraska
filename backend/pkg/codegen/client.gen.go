@@ -211,6 +211,9 @@ type ClientInterface interface {
 
 	UpdateInstance(ctx context.Context, instanceID string, body UpdateInstanceJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
 
+	// GetInstanceStatsLatest request
+	GetInstanceStatsLatest(ctx context.Context, reqEditors ...RequestEditorFn) (*http.Response, error)
+
 	// GetConfig request
 	GetConfig(ctx context.Context, reqEditors ...RequestEditorFn) (*http.Response, error)
 
@@ -748,6 +751,18 @@ func (c *Client) UpdateInstanceWithBody(ctx context.Context, instanceID string, 
 
 func (c *Client) UpdateInstance(ctx context.Context, instanceID string, body UpdateInstanceJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
 	req, err := NewUpdateInstanceRequest(c.Server, instanceID, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) GetInstanceStatsLatest(ctx context.Context, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewGetInstanceStatsLatestRequest(c.Server)
 	if err != nil {
 		return nil, err
 	}
@@ -2871,6 +2886,33 @@ func NewUpdateInstanceRequestWithBody(server string, instanceID string, contentT
 	return req, nil
 }
 
+// NewGetInstanceStatsLatestRequest generates requests for GetInstanceStatsLatest
+func NewGetInstanceStatsLatestRequest(server string) (*http.Request, error) {
+	var err error
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/api/instances_stats/latest")
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest("GET", queryURL.String(), nil)
+	if err != nil {
+		return nil, err
+	}
+
+	return req, nil
+}
+
 // NewGetConfigRequest generates requests for GetConfig
 func NewGetConfigRequest(server string) (*http.Request, error) {
 	var err error
@@ -3221,6 +3263,9 @@ type ClientWithResponsesInterface interface {
 	UpdateInstanceWithBodyWithResponse(ctx context.Context, instanceID string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*UpdateInstanceResponse, error)
 
 	UpdateInstanceWithResponse(ctx context.Context, instanceID string, body UpdateInstanceJSONRequestBody, reqEditors ...RequestEditorFn) (*UpdateInstanceResponse, error)
+
+	// GetInstanceStatsLatestWithResponse request
+	GetInstanceStatsLatestWithResponse(ctx context.Context, reqEditors ...RequestEditorFn) (*GetInstanceStatsLatestResponse, error)
 
 	// GetConfigWithResponse request
 	GetConfigWithResponse(ctx context.Context, reqEditors ...RequestEditorFn) (*GetConfigResponse, error)
@@ -3994,6 +4039,28 @@ func (r UpdateInstanceResponse) StatusCode() int {
 	return 0
 }
 
+type GetInstanceStatsLatestResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	JSON200      *[]InstanceStats
+}
+
+// Status returns HTTPResponse.Status
+func (r GetInstanceStatsLatestResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r GetInstanceStatsLatestResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
 type GetConfigResponse struct {
 	Body         []byte
 	HTTPResponse *http.Response
@@ -4508,6 +4575,15 @@ func (c *ClientWithResponses) UpdateInstanceWithResponse(ctx context.Context, in
 		return nil, err
 	}
 	return ParseUpdateInstanceResponse(rsp)
+}
+
+// GetInstanceStatsLatestWithResponse request returning *GetInstanceStatsLatestResponse
+func (c *ClientWithResponses) GetInstanceStatsLatestWithResponse(ctx context.Context, reqEditors ...RequestEditorFn) (*GetInstanceStatsLatestResponse, error) {
+	rsp, err := c.GetInstanceStatsLatest(ctx, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseGetInstanceStatsLatestResponse(rsp)
 }
 
 // GetConfigWithResponse request returning *GetConfigResponse
@@ -5389,6 +5465,32 @@ func ParseUpdateInstanceResponse(rsp *http.Response) (*UpdateInstanceResponse, e
 	switch {
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
 		var dest Instance
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	}
+
+	return response, nil
+}
+
+// ParseGetInstanceStatsLatestResponse parses an HTTP response from a GetInstanceStatsLatestWithResponse call
+func ParseGetInstanceStatsLatestResponse(rsp *http.Response) (*GetInstanceStatsLatestResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &GetInstanceStatsLatestResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest []InstanceStats
 		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
 			return nil, err
 		}
