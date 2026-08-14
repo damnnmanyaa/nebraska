@@ -1,6 +1,7 @@
 package dbreads_test
 
 import (
+	"database/sql"
 	"testing"
 	"time"
 
@@ -39,11 +40,28 @@ func TestGetInstanceStatsLatest(t *testing.T) {
 	for _, stat := range instanceStats {
 		maxTs, err := a.GetLatestInstanceStatsTimestamp()
 		assert.NoError(t, err)
-		
+
 		// Postgres might truncate microseconds, check with diff <= 1 sec
 		assert.WithinDuration(t, maxTs, stat.Timestamp, time.Second)
 		assert.WithinDuration(t, ts2, maxTs, time.Second)
 		assert.Equal(t, "1.0.1", stat.Version)
 		assert.Equal(t, 2, stat.Instances)
 	}
+}
+
+func TestGetInstanceStatsLatestEmptyTable(t *testing.T) {
+	a, err := api.NewForTest(api.OptionInitDB, api.OptionDisableUpdatesOnFailedRollout)
+	require.NoError(t, err)
+	defer a.Close()
+
+	db := dbreads.DB(a.Queries)
+	_, err = db.Exec(`DELETE FROM instance_stats`)
+	require.NoError(t, err)
+
+	_, err = a.GetLatestInstanceStatsTimestamp()
+	require.ErrorIs(t, err, sql.ErrNoRows)
+
+	instanceStats, err := a.GetInstanceStatsLatest()
+	require.NoError(t, err)
+	require.Empty(t, instanceStats)
 }

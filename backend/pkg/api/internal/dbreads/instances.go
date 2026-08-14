@@ -468,6 +468,9 @@ func (q *Queries) GetInstanceStatsByTimestamp(t time.Time) ([]types.InstanceStat
 // instance_stats. Nebraska's documented convention is that the database
 // session runs in UTC (see docs/poc/known-issues.md) — callers should not
 // assume this function normalizes timezone on their behalf.
+//
+// When instance_stats is empty, MAX(timestamp) is NULL and this function
+// returns sql.ErrNoRows (not a zero time.Time).
 func (q *Queries) GetLatestInstanceStatsTimestamp() (time.Time, error) {
 	var t time.Time
 	query, _, err := goqu.From("instance_stats").
@@ -476,12 +479,16 @@ func (q *Queries) GetLatestInstanceStatsTimestamp() (time.Time, error) {
 		return t, err
 	}
 
-	err = q.db.QueryRowx(query).Scan(&t)
+	var nt sql.NullTime
+	err = q.db.QueryRowx(query).Scan(&nt)
 	if err != nil {
 		return t, err
 	}
+	if !nt.Valid {
+		return t, sql.ErrNoRows
+	}
 
-	return t, nil
+	return nt.Time, nil
 }
 
 // GetInstanceStatsLatest returns an InstanceStats array of instances
@@ -492,9 +499,15 @@ func (q *Queries) GetLatestInstanceStatsTimestamp() (time.Time, error) {
 // in that function (see docs/poc/known-issues.md). GetInstanceStatsByTimestamp
 // itself is intentionally left unmodified — the fix is scoped to this
 // caller only.
+//
+// An empty instance_stats table yields an empty slice and a nil error
+// (same "no data yet" shape as other metrics queries).
 func (q *Queries) GetInstanceStatsLatest() ([]types.InstanceStats, error) {
 	t, err := q.GetLatestInstanceStatsTimestamp()
 	if err != nil {
+		if err == sql.ErrNoRows {
+			return []types.InstanceStats{}, nil
+		}
 		return nil, err
 	}
 	// .UTC() workaround for the timestamp-cast bug in
