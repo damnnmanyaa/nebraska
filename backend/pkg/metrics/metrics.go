@@ -64,6 +64,20 @@ var (
 		},
 	)
 
+	// Latest snapshot from instance_stats (same source as GET /api/instances_stats/latest).
+	instanceStatsLatestGaugeMetric = prometheus.NewGaugeVec(
+		prometheus.GaugeOpts{
+			Namespace: "nebraska",
+			Name:      "instance_stats_latest",
+			Help:      "Latest instance count from instance_stats by channel_name, arch, and version",
+		},
+		[]string{
+			"channel_name",
+			"arch",
+			"version",
+		},
+	)
+
 	l = logger.New("nebraska")
 )
 
@@ -75,6 +89,7 @@ func registerNebraskaMetrics() error {
 		openConnections,
 		inUseConnections,
 		idleConnections,
+		instanceStatsLatestGaugeMetric,
 	}
 
 	for _, collector := range collectors {
@@ -153,6 +168,15 @@ func calculateMetrics(api *api.API) error {
 	openConnections.Set(float64(dbStats.OpenConnections))
 	inUseConnections.Set(float64(dbStats.InUse))
 	idleConnections.Set(float64(dbStats.Idle))
+
+	instanceStats, err := api.GetInstanceStatsLatest()
+	if err != nil {
+		return fmt.Errorf("failed to get latest instance stats metrics: %w", err)
+	}
+
+	for _, stat := range instanceStats {
+		instanceStatsLatestGaugeMetric.WithLabelValues(stat.ChannelName, stat.Arch, stat.Version).Set(float64(stat.Instances))
+	}
 
 	return nil
 }
