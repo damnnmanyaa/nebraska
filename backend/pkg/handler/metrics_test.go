@@ -61,3 +61,27 @@ func TestGetInstanceStatsLatest(t *testing.T) {
 	}
 	assert.True(t, found, "seeded instance_stats row was not found in response")
 }
+
+func TestGetInstanceStatsLatestEmptyTable(t *testing.T) {
+	a, err := api.NewForTest(api.OptionInitDB, api.OptionDisableUpdatesOnFailedRollout)
+	require.NoError(t, err)
+	defer a.Close()
+
+	_, err = a.DB().Exec(`DELETE FROM instance_stats`)
+	require.NoError(t, err)
+
+	h := &Handler{db: a}
+	e := echo.New()
+	req := httptest.NewRequest(http.MethodGet, "/api/instances_stats/latest", nil)
+	rec := httptest.NewRecorder()
+	c := e.NewContext(req, rec)
+
+	err = h.GetInstanceStatsLatest(c)
+	require.NoError(t, err)
+	assert.Equal(t, http.StatusOK, rec.Code)
+
+	var stats []codegen.InstanceStats
+	err = json.Unmarshal(rec.Body.Bytes(), &stats)
+	require.NoError(t, err)
+	assert.Empty(t, stats)
+}
